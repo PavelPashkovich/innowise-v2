@@ -3,15 +3,20 @@
 class PathFinder
 {
     private array $field;
+    private array $startCoordinates;
+    private array $finishCoordinates;
     private int $pointA = 1;
-    private string $pointB = 'x';
+    private int $pointB;
+    private array $shortestPath = [];
+    private int $iteration = 0;
 
-    public function __construct(array $field, array $pointA, array $pointB)
+    public function __construct(array $field, array $startCoordinates, array $finishCoordinates)
     {
         $this->field = $field;
+        $this->startCoordinates = $startCoordinates;
+        $this->finishCoordinates = $finishCoordinates;
 
-        $this->field[$pointA[0]][$pointA[1]] = $this->pointA;
-        $this->field[$pointB[0]][$pointB[1]] = $this->pointB;
+        $this->field[$startCoordinates[0]][$startCoordinates[1]] = $this->pointA;
 
         $this->saveField();
     }
@@ -48,16 +53,37 @@ class PathFinder
         $field = &$this->field;
         foreach ($field as $elemKey => $elem) {
             foreach ($elem as $itemKey => $item) {
-                if ($item > 0 && gettype($item) != 'string') {
-                    if (isset($field[$elemKey + 1][$itemKey]) && $field[$elemKey + 1][$itemKey] == $this->pointB ||
-                        isset($field[$elemKey - 1][$itemKey]) && $field[$elemKey - 1][$itemKey] == $this->pointB ||
-                        isset($field[$elemKey][$itemKey + 1]) && $field[$elemKey][$itemKey + 1] == $this->pointB ||
-                        isset($field[$elemKey][$itemKey - 1]) && $field[$elemKey][$itemKey - 1] == $this->pointB)
-                    {
-                        echo 'Path found!';
-                        $this->printField();
+                if ($item > 0) {
+                    if (isset($field[$elemKey + 1][$itemKey]) && ($elemKey + 1 == $this->finishCoordinates[0] && $itemKey == $this->finishCoordinates[1])) {
+                        $field[$elemKey + 1][$itemKey] = $item + 1;
+                        $this->pointB = $item + 1;
+                        $this->shortestPath[] = [$elemKey + 1, $itemKey];
+                        $this->saveField();
+                        $this->printPath([$elemKey + 1, $itemKey]);
+                        return;
+                    } elseif (isset($field[$elemKey - 1][$itemKey]) && ($elemKey - 1 == $this->finishCoordinates[0] && $itemKey == $this->finishCoordinates[1])) {
+                        $field[$elemKey - 1][$itemKey] = $item + 1;
+                        $this->pointB = $item + 1;
+                        $this->shortestPath[] = [$elemKey - 1, $itemKey];
+                        $this->saveField();
+                        $this->printPath([$elemKey - 1, $itemKey]);
+                        return;
+                    } elseif (isset($field[$elemKey][$itemKey + 1]) && ($elemKey == $this->finishCoordinates[0] && $itemKey + 1 == $this->finishCoordinates[1])) {
+                        $field[$elemKey][$itemKey + 1] = $item + 1;
+                        $this->pointB = $item + 1;
+                        $this->shortestPath[] = [$elemKey, $itemKey + 1];
+                        $this->saveField();
+                        $this->printPath([$elemKey, $itemKey + 1]);
+                        return;
+                    } elseif (isset($field[$elemKey][$itemKey - 1]) && ($elemKey == $this->finishCoordinates[0] && $itemKey - 1 == $this->finishCoordinates[1])) {
+                        $field[$elemKey][$itemKey - 1] = $item + 1;
+                        $this->pointB = $item + 1;
+                        $this->shortestPath[] = [$elemKey, $itemKey - 1];
+                        $this->saveField();
+                        $this->printPath([$elemKey, $itemKey - 1]);
                         return;
                     }
+
                     if (isset($field[$elemKey + 1][$itemKey]) && $field[$elemKey + 1][$itemKey] == 0) {
                         $field[$elemKey + 1][$itemKey] = $item + 1;
                     }
@@ -70,16 +96,48 @@ class PathFinder
                     if (isset($field[$elemKey][$itemKey - 1]) && $field[$elemKey][$itemKey - 1] == 0) {
                         $field[$elemKey][$itemKey - 1] = $item + 1;
                     }
+
                     $this->saveField();
+                    $this->iteration++;
                 }
             }
         }
+        if ($this->iteration > 2000) {
+            echo "Path was not found! :(";
+            return;
+        }
         $this->findPath();
+    }
+
+    private function printPath($point) {
+        $field = &$this->field;
+        if($point != $this->startCoordinates) {
+            $item = $field[$point[0]][$point[1]];
+            if (isset($field[$point[0] + 1][$point[1]]) && $field[$point[0] + 1][$point[1]] == $item - 1) {
+                $this->shortestPath[] = [$point[0] + 1, $point[1]];
+            } elseif (isset($field[$point[0] - 1][$point[1]]) && $field[$point[0] - 1][$point[1]] == $item - 1) {
+                $this->shortestPath[] = [$point[0] - 1, $point[1]];
+            } elseif (isset($field[$point[0]][$point[1] + 1]) && $field[$point[0]][$point[1] + 1] == $item - 1) {
+                $this->shortestPath[] = [$point[0], $point[1] + 1];
+            } elseif (isset($field[$point[0]][$point[1] - 1]) && $field[$point[0]][$point[1] - 1] == $item - 1) {
+                $this->shortestPath[] = [$point[0], $point[1] - 1];
+            }
+            $this->printPath(array_slice($this->shortestPath, -1)[0]);
+        } else {
+            foreach ($field as $elemKey => $elem) {
+                foreach ($elem as $itemKey => $item) {
+                    if (in_array([$elemKey, $itemKey], $this->shortestPath)) {
+                        $field[$elemKey][$itemKey] = 'X';
+                    }
+                }
+            }
+            $this->printField();
+        }
     }
 }
 
-$pointA = [0, 0];
-$pointB = [9, 9];
+$startCoordinates = [0, 0];
+$finishCoordinates = [9, 9];
 
 $field = [
     [0,0,-1,0,-1,0,0,0,0,0],
@@ -90,10 +148,10 @@ $field = [
     [0,0,0,0,0,0,-1,0,0,-1],
     [0,0,-1,0,0,0,0,0,0,0],
     [0,0,0,0,-1,0,0,-1,0,0],
-    [0,0,0,0,-1,0,0,0,0,0],
+    [0,0,0,0,-1,0,0,0,-1,-1],
     [0,0,-1,0,-1,0,0,0,0,0],
 ];
 
-$pathFinder = new PathFinder($field, $pointA, $pointB);
+$pathFinder = new PathFinder($field, $startCoordinates, $finishCoordinates);
 $pathFinder->findPath();
 
